@@ -31,10 +31,6 @@ class RandomAttack:
 
 
 # NEW! Method2: FED AVG attack
-# e.g. (k=5, start_attack_round=3:
-#          round_num=3开始攻击（前3轮是随机）
-#           每次都使用“过去5轮”的 global gradient 来伪造
-#           不够5就随机, 第5轮使用round0-4的avg，第6轮使用round1-5的avg...
 class GradientReplayAttack:
     def __init__(self, k, start_attack_round):
         self.k = k 
