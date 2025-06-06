@@ -1,126 +1,85 @@
-# Federated Learning Contribution Estimation (FLCE)
+# Free-rider Attacking on Federated Learning: A Quantitative Perspective
 
-Welcome to the Federated Learning Contribution Estimation (FLCE) repository!
+This repository contains the source code for **GradPred**, a unified framework for simulating free-rider attacks in Federated Learning (FL) by predicting future gradients. GradPred includes multiple forgery strategies such as:
 
-Federated Learning (FL) is a collaborative machine learning paradigm where multiple clients utilize their data for model training without transferring their data. 
-In this context, Federated Learning Contribution Estimation (FLCE) emerges, aiming to
-compute fair and reasonable contribution scores as incentives to motivate FL clients.
-This project is dedicated to providing methods and tools for estimating the contributions of clients in an FL environment.
+- **Random**
+- **FedAVG**
+- **ARIMA**
+- **Moirai**
 
-The project stems from a paper to appear at VLDB'24 entitled "Contributions Estimation in Federated Learning: A Comprehensive Experimental Evaluation".
+The framework also evaluates their quantitative impact using **Shapley Value-based contribution estimation**. Our implementation supports a variety of datasets and analyzes attacker effectiveness, impact on honest clients, and runtime performance.
 
-## Features
 
-- **FLCE Methods**: Implements a variety of FLCE methods to estimate the contribution of each client.
-- **Benchmarking Tools**: Includes tools for comparing methods in terms of effectiveness, robustness, and efficiency.
+---
+## Datasets
 
-[//]: # (- **Simulation Environment**: Provides a simulated federated learning environment for testing and benchmarking contribution estimation methods under various conditions.)
+All datasets used (Adult, TicTacToe, Dota2, etc.) are publicly available and included under `data/raw/`.  
+Original sources:
 
-[//]: # (- **Extensible Framework**: Designed to be easily extended with new contribution estimation algorithms and federated learning models. You may add new datasets, data distributions, models, and flce methods to the project.)
+- Adult: [UCI Census Income](https://archive.ics.uci.edu/ml/datasets/adult)
+- TicTacToe: [UCI Tic-Tac-Toe](https://archive.ics.uci.edu/ml/datasets/Tic-Tac-Toe+Endgame)
+- Dota2: [UCI Dota2](https://archive.ics.uci.edu/dataset/367/dota2+games+results)
 
-## Getting Started
 
-### Prerequisites
+---
+## Installation Requirements
 
-Before you begin, ensure you have met the following requirements.
+All required Python packages are listed in [`requirement_attack.txt`](./requirement_attack.txt).  
+We recommend using a **dedicated Conda environment**.
 
-Create and a conda environment and activate it using
-```shell
-conda env create -f environment.yml
-conda activate flce
+### Step 1: Create a new Conda environment
+
+```bash
+conda create -n flce_attack python=3.10 -y
+conda activate flce_attack
+pip install -r requirement_attack.txt
 ```
 
-Install pytorch using
-```shell
-conda install pytorch==1.10.1 torchvision==0.11.2 torchaudio==0.10.1 cudatoolkit=11.3 -c pytorch -c conda-forge
-```
-
-[//]: # (### Installation)
-
-[//]: # ()
-[//]: # (To perform FLCE, follow these steps:)
-
-[//]: # ()
-[//]: # (1. Clone the repository:)
-
-[//]: # (   ```)
-
-[//]: # (   git clone https://github.com/veevang/flce)
-
-[//]: # (   ```)
-
-[//]: # (2. Navigate to the repository directory:)
-
-[//]: # (   ```)
-
-[//]: # (   cd flce)
-
-[//]: # (   ```)
-
-[//]: # (3. Install the required Python packages:????)
-
-[//]: # (   ```)
-
-[//]: # (   pip install -r requirements.txt)
-
-[//]: # (   ```)
-
-### Usage
-
-[//]: # (To start using FLCE, you can run the main script with the following command:)
-
-[//]: # (```shell)
-
-[//]: # (python -u main.py --num_parts 8 -t effective -m $method --dataset tictactoe --model TicTacToeMLP --lr 0.005 --num_epoch 60 --hidden_layer_size 16 --batch_size 16 --device cpu -a 0.65 --distribution "quantity skew" -s $seed --num_repeat 1 --start_date $today --num_try $sub_folder --value_functions "${value_functions[@]}" > "./log/tictactoe quantity skew $method.out" 2>&1 &)
-
-[//]: # (```)
-
-[//]: # (conda install pytorch==1.10.1 torchvision==0.11.2 torchaudio==0.10.1 cudatoolkit=11.3 -c pytorch -c conda-forge)
-
-[//]: # (-c conda-forge scikit-learn)
-
-For examples, please refer to the `run.sh` file in the root directory.
-After editing the file, you might use the following code to run the experiments:
-```shell
-bash run.sh
-```
-
-[//]: # (## Contributing)
-
-[//]: # ()
-[//]: # (We welcome contributions from the community! If you have improvements or new features you'd like to add, please follow these steps:)
-
-[//]: # ()
-[//]: # (1. Fork the repository.)
-
-[//]: # (2. Create a new branch for your feature &#40;`git checkout -b feature/AmazingFeature`&#41;.)
-
-[//]: # (3. Commit your changes &#40;`git commit -m 'Add some AmazingFeature'`&#41;.)
-
-[//]: # (4. Push to the branch &#40;`git push origin feature/AmazingFeature`&#41;.)
-
-[//]: # (5. Open a Pull Request.)
-
-[//]: # ()
-[//]: # (For more detailed instructions, see [CONTRIBUTING.md]&#40;./CONTRIBUTING.md&#41;.)
-
-[//]: # (## License)
-
-[//]: # ()
-[//]: # (This project is licensed under the [INSERT LICENSE HERE] License - see the [LICENSE]&#40;LICENSE&#41; file for details.)
-
-## Acknowledgments
-
-- Thank Prof. Guoliang Li, Dr. Yong Wang, and Dr. Kaiyu Li for their contributions to the development of this project.
-
-[//]: # (- In our implementation, we referred to the repository: https://github.com/AI-secure/Shapley-Study.???)
-
-[//]: # (- Thank funding???)
-
-## Contact
-
-For any questions or feedback regarding FLCE, please contact us at [chen-yw20@mails.tsinghua.edu.cn](mailto:chen-yw20@mails.tsinghua.edu.cn) or post an issue on github.
+> **Note:** If the installation fails due to `@ file://` paths in the `requirement_attack.txt` file,  
+> it may be because these packages were originally installed from local Conda cache or internal builds.  
+> You can remove such lines or simply delete the file and install packages manually (especially `uni2ts` and its dependencies).
 
 ---
 
-In summary, this project can help evaluate FLCE methods. We hope this project can help you understand existing FLCE methods and design your own ones. Enjoy!
+### Step 2: Install additional packages for Moirai
+
+Moirai-based attacks use Salesforce's [Uni2TS](https://github.com/SalesforceAIResearch/uni2ts), which requires:
+
+```bash
+pip install uni2ts==1.2.0 gluonts==0.14.4
+```
+
+Or (preferred) clone and install the full package locally:
+
+```bash
+git clone https://github.com/SalesforceAIResearch/uni2ts.git
+cd uni2ts
+pip install -e ".[notebook]"
+```
+
+---
+## How to Run
+
+To launch all attack experiments across all datasets, methods, and configurations, you can run the provided Bash script:
+
+```bash
+bash run_parallel.sh
+```
+
+This script will:
+- Sweep across datasets: `tictactoe`, `adult`, `dota2`
+- Use all four attack methods: `random`, `fedavg`, `arima`, `moirai`
+- Test multiple client numbers: `2, 4, 6, 8`
+- Sweep corresponding `alpha` values for each dataset
+- Perform trials `0` and `1`
+- Run both with and without attack (`--use_attack`)
+- Save logs to the `logs_sv_parallel/` directory
+
+It supports basic parallelism with `MAX_PARALLEL=4` by default. You can adjust this value at the top of `run_parallel.sh`.
+
+
+### Compatibility
+
+Our implementation is fully compatible with **CPU-only environments**  
+No CUDA or GPU support is required for baseline experiments.
+
