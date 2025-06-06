@@ -55,7 +55,6 @@ class GradientReplayAttack:
 
 
 # NEW! Method3: ARIMA attack
-#自动判断何时切换阶段? 历史 global gradient 方差趋于稳定后开始使用 ARIMA (this one)
 class ARIMAAttack:
     def __init__(self, k, random_round, var_window=3, var_threshold=5e-3): #1e-4 3e-4
         self.k = k
