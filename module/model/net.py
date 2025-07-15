@@ -157,7 +157,7 @@ class Net(nn.Module):
             flattened = flattened[n_params:]
         return grad_update
 
-    # 要保证每次fit前初始化一次
+    # Make sure to initialize once before each fit
     def _fit(self,
              X_train,
              y_train,
@@ -168,7 +168,7 @@ class Net(nn.Module):
              batch_size
              ):
 
-        # 初始化一遍，防止上次的训练对这次产生影响
+        # Initialize once to prevent the last training from affecting this one
         if not incremental:
             self.load_state_dict(self.initial_state_dict)
             self.incremental_seed = self.seed
@@ -183,7 +183,7 @@ class Net(nn.Module):
         # first, process data. put into dataloader.
         train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-        # 进入训练模式
+        # enter training mode
         self.train(True)
         optimizer = optim.Adam(self.parameters(), lr=lr)
         # print(optimizer.state_dict())
@@ -209,7 +209,7 @@ class Net(nn.Module):
                 optimizer.step()
 
                 running_loss += loss.item()
-        # 退出训练模式
+        #exit training mode
         self.train(False)
         return
 
@@ -229,10 +229,10 @@ class Net(nn.Module):
         # first, process data. put into dataloader.
         train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-        # 初始化一遍，防止上次的训练对这次产生影响
+        # Initialize once to prevent the last training from affecting this one
         self.load_state_dict(self.initial_state_dict)
 
-        # 进入训练模式
+        # enter training mode
         optimizer = optim.Adam(self.parameters(), lr=lr)
 
         val_list = np.zeros(len(value_functions))
@@ -275,7 +275,7 @@ class Net(nn.Module):
                                                 f1_score(y_true=y_test, y_pred=y_pred, average="micro"))
 
             # print(running_loss)
-        # 退出训练模式
+        # exit training mode
         self.train(False)
         return val_list
 
@@ -333,7 +333,7 @@ class Net(nn.Module):
 #         x = self.fc2(x)
 #         return x
 #
-#     # 假设训练两个epoch？
+#     # Suppose training for two epochs?
 #     def fit(self, X_train, y_train):
 #         return self._fit(X_train, y_train, num_epochs=10, loss_fun=nn.CrossEntropyLoss(), lr=0.01)
 #
@@ -409,7 +409,7 @@ class AdultMLP(Net):
     #                                loss_fun=nn.BCELoss(), lr=self.lr, test_interval=1, batch_size=self.batch_size)
     # num epoch:40, lr: 0.001, accu:0.854793793926535
 
-    # 改的新的，试试看！2024年3月25日06:14:05
+    # updated 2024-3-25 06:14:05
     def fed_train_and_score(self, X_train_parts, y_train_parts, X_test, y_test, value_functions):
         return self._fed_train(X_train_parts, y_train_parts, num_global_rounds=self.num_epoch, num_local_rounds=1,
                    loss_fun=nn.BCELoss(), lr=self.lr, test_interval=1, batch_size=self.batch_size, score=True,
@@ -640,7 +640,7 @@ class CreditCardMLP(Net):
 
 
 # https://stackoverflow.com/questions/71998978/early-stopping-in-pytorch
-# early stopper只根据训练的train_loss是否改变来改变
+# early stopper is only based on the trained train_Change whether the loss changes or not
 class EarlyStopper:
     def __init__(self, n_iter_no_change=10, tol=1e-4):
         self.best_model_state = None
@@ -658,7 +658,6 @@ class EarlyStopper:
             self._no_improvement_count = 0
         if train_loss < self.best_loss:
             self.best_loss = train_loss
-            # 必须deepcopy，字典是个随时改变的量，记录的是当前状态，而非最好状态。
             self.best_model_state = copy.deepcopy(model.state_dict())
 
         if self._no_improvement_count >= self.n_iter_no_change:
