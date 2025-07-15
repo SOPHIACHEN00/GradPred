@@ -27,7 +27,7 @@ class StructuredClassificationManager(DataManager):
     def read(self, test_ratio, shuffle_seed, cuda=False, nrows=None):
         pass
 
-    # 恶意参与方：攻击对抗
+    # Malicious participants: Attack and confrontation
     def flip_y_train(self, parts: set, random_seed, ratio=1):
         assert type(parts) is set
         np.random.seed(random_seed)
@@ -39,8 +39,7 @@ class StructuredClassificationManager(DataManager):
             self.y_train_parts[client][flip] = torch.tensor(1) - self.y_train_parts[client][flip]
         return
 
-    # 恶意参与方：随机生成
-    # 在一个参与方上生成一些随机数据
+    # Malicious participants: Randomly generated
     def randomly_generate_data(self, clients, ratio, seed):
         num_categorical_columns = sum(self.num_each_categorical_field())
         num_numerical_fields = len(self.X_numerical_fields)
@@ -54,20 +53,20 @@ class StructuredClassificationManager(DataManager):
             y = np.zeros(shape=num_rows)
 
             for row in X:
-                # categorical是通过OneHotEncoder来产生的，比如说一个有3个元素的枚举类，那么其编码后对应的列为三列，
-                # 这个枚举类中的三个元素分别对应这三列取值为[1, 0, 0]，[0, 1, 0]，[0, 0, 1]
 
-                # categorical左侧的界从0开始。
+                # categorical is generated through OneHotEncoder. For instance, in an enumeration class with three elements, the corresponding columns after encoding are three columns. 
+                # The three elements in this enumeration class respectively correspond to the values of these three columns as [1, 0, 0], [0, 1, 0]. [0, 0, 1] 
+                # categorical The boundary on the left starts from 0.
+                
                 categorical_left_bound = 0
-                # 对于每一个分类categorical
+
                 for num_this_categorical in self.num_each_categorical_field():
-                    # 考虑这个categorical的哪一个enum值变为1
+
                     rand = np.random.randint(0, num_this_categorical)
                     row[rand + categorical_left_bound] = 1
-                    # 维护categorical的左界
+
                     categorical_left_bound += num_this_categorical
 
-                # 连续continuous
                 for i in range(num_numerical_fields):
                     row[num_categorical_columns + i] = rng.standard_normal(1)
 
@@ -82,20 +81,17 @@ class StructuredClassificationManager(DataManager):
 
         return
 
-    # 如果dataframe = none，那么就编码对象自己读取的data，并且储存到
+    # If dataframe = none, then the encoded object reads the data itself and stores it
     def _encode(self, df: pd.DataFrame = None):
         if df is None:
             df = self.data
             encode_self_dataframe = True
         else:
-            # 处理self.data
             encode_self_dataframe = False
 
-        # 编码X
         X_categorical_encoder = OneHotEncoder(categories=self.X_categories)
         X_categorical = X_categorical_encoder.fit_transform(df[self.X_categorical_fields]).toarray()
 
-        # 把numerical的列量化为标准分
         if len(self.X_numerical_fields) != 0:
             X_numerical = preprocessing.scale(df[self.X_numerical_fields].to_numpy(float))
         else:
@@ -103,11 +99,10 @@ class StructuredClassificationManager(DataManager):
 
         X = np.concatenate((X_categorical, X_numerical), axis=1)
 
-        # 编码y
         y_encoder = LabelEncoder()
         y = y_encoder.fit_transform(df[self.y_field])
 
-        # 如果编码的是自己的数据，需要shuffle一下
+        # If the encoded data is your own, it needs to be shuffled
         if encode_self_dataframe:
             np.random.seed(666)
             shuffle_indices = np.arange(X.shape[0])
@@ -115,11 +110,11 @@ class StructuredClassificationManager(DataManager):
             X = X[shuffle_indices]
             y = y[shuffle_indices]
 
-        # 转变为tensor
+        # convert to tensor
         X = torch.FloatTensor(X)
         y = torch.LongTensor(y)
 
-        # 如果编码的是自己的数据，那么要赋值给自己的X，y变量
+        # If the encoded data is one's own, then it should be assigned to one's own X and y variables
         if encode_self_dataframe:
             self.X = X
             self.y = y
@@ -132,17 +127,15 @@ class StructuredClassificationManager(DataManager):
 
     # use dirichlet distribution to create non-iid distributions
     def non_iid_split(self, num_parts, alpha, random_state):
-        # 先将全数据集分割为0与1
+
         labels = set()
         for label in self.y_train:
             if str(label) not in labels:
                 labels.add(str(label))
-        # 构造一个labels集合
 
         X_train_label_sorted = dict(list())
         y_train_label_sorted = dict(list())
 
-        # 让label不同的分开
         for i in range(len(self.y_train)):
             if str(self.y_train[i]) not in X_train_label_sorted.keys():
                 X_train_label_sorted[str(self.y_train[i])] = []
@@ -154,7 +147,6 @@ class StructuredClassificationManager(DataManager):
             X_train_label_sorted[key] = torch.stack(X_train_label_sorted[key])
             y_train_label_sorted[key] = torch.stack(y_train_label_sorted[key])
 
-        # 每一组数据按照狄利克雷分布分成若干参与方
         list_of_ratios = scipy.stats.dirichlet.rvs(alpha, size=len(X_train_label_sorted), random_state=random_state)
         ratios = dict()
         index = 0
@@ -168,12 +160,9 @@ class StructuredClassificationManager(DataManager):
         for key in X_train_label_sorted.keys():
             lo_ratios[key] = 0
 
-        # 对于每一个参与方而言
         for i in range(num_parts):
-            # 划定每个标签的数据里，哪些数据对应的是这个参与方？
             X_train_this_client = []
             y_train_this_client = []
-            # 必须保证每个参与方里既有0又有1，这样一些模型才可以正常fit
             for label in X_train_label_sorted.keys():
                 n = len(X_train_label_sorted[label])
                 X_train_this_client.extend(X_train_label_sorted[label][
@@ -196,7 +185,7 @@ class Adult(StructuredClassificationManager):
         self.task = "Classification"
         return
 
-    # 105列，去除无效列后有30162行
+    # 105 columns. After removing the invalid columns, there are 30,162 rows
     def read(self, test_ratio, shuffle_seed, cuda=False, nrows=None):
         fields = [
             'age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation',
@@ -208,15 +197,13 @@ class Adult(StructuredClassificationManager):
                                 engine='python',
                                 names=fields,
                                 sep=', ',
-                                na_values="?",  # na_values指的是，当碰到"?"时将其替换为nan
+                                na_values="?",  
                                 nrows=nrows)
         self.data = sklearn.utils.shuffle(self.data, random_state=shuffle_seed)
 
-        # 预处理，处理未知值，将上一步得到的含NaN的行都删除
         self.data.dropna(axis=0, how='any', inplace=True)
 
-        # X列，按照X的性质分为两类，分类与连续
-        # X为分类列
+
         self.X_categorical_fields = [
             'workclass', 'education', 'marital-status', 'occupation',
             'relationship', 'race', 'sex', 'native-country'
@@ -241,7 +228,6 @@ class Adult(StructuredClassificationManager):
                           'Trinadad&Tobago', 'Peru', 'Hong', 'Holand-Netherlands']
         self.X_categories = [workclass, education, marital_status, occupation, relationship, race, sex, native_country]
 
-        # X为连续的
         self.X_numerical_fields = [
             'age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week'
         ]
@@ -264,7 +250,6 @@ class Bank(StructuredClassificationManager):
         self.data = None
         return
 
-    # 51列，去除无效行后有45211行
     def read(self, test_ratio, shuffle_seed, cuda=False, nrows=None) -> Union[Tuple, Tuple, Tuple, Tuple]:
         project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.data = pd.read_csv('data/raw/bank/bank-full.csv',
@@ -272,11 +257,8 @@ class Bank(StructuredClassificationManager):
                                 sep=';',
                                 nrows=nrows)
         self.data = sklearn.utils.shuffle(self.data, random_state=shuffle_seed)
-        # 预处理，处理未知值，将上一步得到的含NaN的行都删除
         self.data.dropna(axis=0, how='any', inplace=True)
 
-        # X列，按照X的性质分为两类，分类与连续
-        # X为分类列
         self.X_categorical_fields = [
             'job', 'marital', 'education', 'default',
             'housing', 'loan', 'contact', 'month', 'poutcome'
@@ -294,7 +276,6 @@ class Bank(StructuredClassificationManager):
         poutcome = ["unknown", "other", "failure", "success"]
         self.X_categories = [job, marital, education, default, housing, loan, contact, month, poutcome]
 
-        # X为连续的
         self.X_numerical_fields = [
             'age', 'balance', 'day', 'duration', 'campaign', 'pdays',
             'previous'
@@ -332,15 +313,12 @@ class TicTacToe(StructuredClassificationManager):
         self.data = pd.read_csv('data/raw/tic+tac+toe+endgame/tic-tac-toe.data',
                                 names=fields,
                                 sep=',',
-                                na_values="false",  # na_values指的是，当碰到"?"时将其替换为nan
+                                na_values="false",  
                                 nrows=nrows)
         self.data = sklearn.utils.shuffle(self.data, random_state=shuffle_seed)
 
-        # 预处理，处理未知值，将上一步得到的含NaN的行都删除
         self.data.dropna(axis=0, how='any', inplace=True)
 
-        # X列，按照X的性质分为两类，分类与连续
-        # X为分类列
         self.X_categorical_fields = [
             "top-left-square",
             "top-middle-square",
@@ -355,7 +333,6 @@ class TicTacToe(StructuredClassificationManager):
 
         self.X_categories = [["x", "o", "b"] for _ in range(9)]
 
-        # X为连续的
         self.X_numerical_fields = []
 
         self.y_field = "class"
@@ -385,15 +362,12 @@ class Dota2(StructuredClassificationManager):
                                 engine='python',
                                 sep=',',
                                 names=fields,
-                                na_values="false",  # na_values指的是，当碰到"?"时将其替换为nan
+                                na_values="false", 
                                 nrows=nrows)
         self.data = sklearn.utils.shuffle(self.data, random_state=shuffle_seed)
 
-        # 预处理，处理未知值，将上一步得到的含NaN的行都删除
         self.data.dropna(axis=0, how='any', inplace=True)
 
-        # X列，按照X的性质分为两类，分类与连续
-        # X为分类列
         self.X_categorical_fields = [
             'cluster', 'mode', 'type',
         ]
@@ -402,7 +376,6 @@ class Dota2(StructuredClassificationManager):
         type = sorted(self.data["type"].unique())
         self.X_categories = [cluster, mode, type]
 
-        # X为连续的
         self.X_numerical_fields = [f"hero{i}" for i in range(1, 114)]
 
         self.y_field = "win"
@@ -421,14 +394,11 @@ class Dota2(StructuredClassificationManager):
             df = self.data
             encode_self_dataframe = True
         else:
-            # 处理self.data
             encode_self_dataframe = False
 
-        # 编码X
         X_categorical_encoder = OneHotEncoder(categories=self.X_categories)
         X_categorical = X_categorical_encoder.fit_transform(df[self.X_categorical_fields]).toarray()
 
-        # 把numerical的列量化为标准分
         if len(self.X_numerical_fields) != 0:
             self.X_numerical_means = df[self.X_numerical_fields].to_numpy(float).mean(axis=0)
             self.X_numerical_stds = df[self.X_numerical_fields].to_numpy(float).std(axis=0)
@@ -438,11 +408,9 @@ class Dota2(StructuredClassificationManager):
 
         X = np.concatenate((X_categorical, X_numerical), axis=1)
 
-        # 编码y
         y_encoder = LabelEncoder()
         y = y_encoder.fit_transform(df[self.y_field])
 
-        # 如果编码的是自己的数据，需要shuffle一下
         if encode_self_dataframe:
             np.random.seed(666)
             shuffle_indices = np.arange(X.shape[0])
@@ -450,18 +418,15 @@ class Dota2(StructuredClassificationManager):
             X = X[shuffle_indices]
             y = y[shuffle_indices]
 
-        # 转变为tensor
         X = torch.FloatTensor(X)
         y = torch.LongTensor(y)
 
-        # 如果编码的是自己的数据，那么要赋值给自己的X，y变量
         if encode_self_dataframe:
             self.X = X
             self.y = y
 
         return X, y
 
-    # dota2的编码需要重写!
     def randomly_generate_data(self, clients, ratio, seed):
         num_categorical_columns = sum(self.num_each_categorical_field())
         num_numerical_fields = len(self.X_numerical_fields)
@@ -473,17 +438,12 @@ class Dota2(StructuredClassificationManager):
             y = np.zeros(shape=num_rows)
 
             for row in X:
-                # categorical左侧的界从0开始。
                 categorical_left_bound = 0
-                # 对于每一个分类categorical
                 for num_this_categorical in self.num_each_categorical_field():
-                    # 考虑这个categorical的哪一个enum值变为1
                     rand = np.random.randint(0, num_this_categorical)
                     row[rand + categorical_left_bound] = 1
-                    # 维护categorical的左界
                     categorical_left_bound += num_this_categorical
 
-                # 113个角色中选择5个己方角色，选择5个敌方角色。
                 selected_champion_ids = np.random.choice([i for i in range(1, 114)], size=10, replace=False)
                 selected_champions = [f"hero{i}" for i in selected_champion_ids]
                 for i, selected_champion in enumerate(selected_champions):
@@ -536,7 +496,6 @@ class CreditCard(StructuredClassificationManager):
                                 nrows=nrows)
         self.data = sklearn.utils.shuffle(self.data, random_state=shuffle_seed)
 
-        # 预处理，处理未知值，将上一步得到的含NaN的行都删除
         self.data.dropna(axis=0, how='any', inplace=True)
 
         X_df = self.data.drop(['id', 'Class'], axis=1)
@@ -551,7 +510,6 @@ class CreditCard(StructuredClassificationManager):
         X = X[shuffle_indices]
         y = y[shuffle_indices]
 
-        # 转变为tensor
         X = torch.FloatTensor(X)
         y = torch.LongTensor(y)
 
