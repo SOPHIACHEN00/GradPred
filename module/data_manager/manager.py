@@ -14,7 +14,6 @@ from scipy.stats import dirichlet
 from abc import ABC, abstractmethod
 
 
-# 是否需要标注是师兄的方法
 
 class DataManager(ABC):
     def __init__(self, name=None):
@@ -41,7 +40,6 @@ class DataManager(ABC):
             self.X, self.y, test_size=test_ratio, random_state=random_state)
         return
 
-    # 按比例分配参与方，这个写得好
     def ratio_split(self, ratios):
         # assert sum(ratios) == 1
         lo_ratio = 0
@@ -56,15 +54,13 @@ class DataManager(ABC):
         # print([len(self.X_train_parts[i]) for i in range(8)])
         return self.X_train_parts, self.y_train_parts
 
-    # 均分
     def uniform_split(self, num_parts):
-        # 不妨化归为ratio_split问题
         ratios = []
         for i in range(num_parts):
             ratios.append((i + 1) / float(num_parts) - i / float(num_parts))
         return self.ratio_split(ratios)
 
-    # 只shuffle y
+    # shuffle y ONLY
     def low_quality_data(self, parts:set, random_seed, ratio):
         np.random.seed(random_seed)
         for client in parts:
@@ -74,7 +70,7 @@ class DataManager(ABC):
             self.y_train_parts[client][y_list] = self.y_train_parts[client][y_shuffle_list]
         return
 
-    # 恶意参与方：数据复制
+    # Malicious participant: Data replication
     def data_copy(self, clients: set, seed, ratio):
         np.random.seed(seed)
         for client in clients:
