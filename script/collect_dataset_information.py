@@ -1,4 +1,4 @@
-# 统计所有dataset的统计信息。
+# Count the statistical information of all datasets.
 from decimal import Decimal
 for loader_cls in [TicTacToe, Adult, Bank, Dota2, CreditCard]:
     loader = loader_cls()
