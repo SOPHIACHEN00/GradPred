@@ -16,15 +16,14 @@ class StructuredRegressionManager(DataManager):
         return
 
     # use dirichlet distribution to create non-iid distributions
-    # 按照是否大于average来划分
+
     def non_iid_split(self, num_parts, alpha, random_state):
-        # 先将全数据集分割为0与1
+
         average = np.average(np.array(self.y_train))
-        # 构造一个features集合
+
         X_train_feature_sorted = dict(list())
         y_train_feature_sorted = dict(list())
 
-        # 让label不同的分开
         for i in range(len(self.y_train)):
             if self.y_train[i] >= average:
                 feature = ">=average"
@@ -40,7 +39,6 @@ class StructuredRegressionManager(DataManager):
             X_train_feature_sorted[key] = torch.stack(X_train_feature_sorted[key])
             y_train_feature_sorted[key] = torch.stack(y_train_feature_sorted[key])
 
-        # 每一组数据按照狄利克雷分布分成若干参与方
         list_of_ratios = scipy.stats.dirichlet.rvs(alpha, size=len(X_train_feature_sorted), random_state=random_state)
         ratios = dict()
         index = 0
@@ -55,9 +53,7 @@ class StructuredRegressionManager(DataManager):
         for key in X_train_feature_sorted.keys():
             lo_ratios[key] = 0
 
-        # 对于每一个参与方而言
         for i in range(num_parts):
-            # 划定每个标签的数据里，哪些数据对应的是这个参与方？
             X_train_this_client = []
             y_train_this_client = []
             for label in X_train_feature_sorted.keys():
@@ -76,8 +72,8 @@ class StructuredRegressionManager(DataManager):
         return self.X_train_parts, self.y_train_parts
 
 
-    # 恶意参与方：攻击对抗
-    # 具体实现方法：y <- max_this_client + min_this_client - y
+
+    #  implementation methods：y <- max_this_client + min_this_client - y
     def flip_y_train(self, parts: set, random_seed, ratio=1):
         assert type(parts) is set
         np.random.seed(random_seed)
@@ -93,7 +89,6 @@ class StructuredRegressionManager(DataManager):
         return
 
 
-# field 1 为bit field（类似于一个categorical field），只能有两个取值，均匀分布取值。
 class Diabetes(StructuredRegressionManager):
     def __init__(self):
         super().__init__()
@@ -121,8 +116,7 @@ class Diabetes(StructuredRegressionManager):
         self.train_test_split(test_ratio=test_ratio, random_state=shuffle_seed)
         return
 
-    # 随机生成数据
-    # 具体实现方法，正态分布，限制在[y_min, y_max]之间
+
     def randomly_generate_data(self, client, num_rows: int, seed):
         num_fields = len(self.X_train_parts[client][0])
         average = np.average(np.array(self.y_train_parts[client]))
@@ -138,14 +132,14 @@ class Diabetes(StructuredRegressionManager):
 
         numerical_fields = np.array([0]+[i for i in range(2, 10)])
         bit_fields = np.array([1])
-        # 可以选的内容
+
         bit_selection = list(set(np.array(self.X_train_parts[client]).T[1]))
 
         # randomly generate x - ch all numerical field
         for row in X:
             for i in numerical_fields:
                 row[i] = rng.standard_normal(1)
-            # 只能有两个取值
+
             for i in bit_fields:
                 sample = rng.standard_normal(1)
                 if sample < 0:
@@ -174,7 +168,7 @@ class Diabetes(StructuredRegressionManager):
         return X, y
 
 
-# 全numerical field
+# whole numerical field
 class CaliforniaHousing(StructuredRegressionManager):
     def __init__(self):
         super().__init__()
@@ -204,9 +198,7 @@ class CaliforniaHousing(StructuredRegressionManager):
 
         return
 
-    # 随机生成数据
-    # 具体实现方法，正态分布，限制在[y_min, y_max]之间
-    # ch所有的都是numerical field
+
     def randomly_generate_data(self, client, num_rows: int, seed):
         num_fields = len(self.X_train_parts[client][0])
         average = np.average(np.array(self.y_train_parts[client]))
