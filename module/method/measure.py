@@ -56,7 +56,7 @@ class Measure(ABC):
         if self.cache.get(str(parts)) is not None:
             val_list = self.cache[str(parts)]
 
-        # 如果不在cache里
+        # If not in the cache
         else:
             # value functions all belongs to model performance!
             if set([self.value_functions[i] in ["f1", "f1_macro", "f1_micro", "accuracy"] for i in
@@ -92,12 +92,12 @@ class Measure(ABC):
                         raise Exception(f"Value function {value_function} does not exist!")
                     val_list.append(v)
 
-            # 如果不在cache里，就维护cache。
+            # If it is not in the cache, maintain the cache.
             self.cache[str(parts)] = copy.deepcopy(val_list)
         return val_list[function_index]
 
     def get_remove_client_data(self):
-        # 检查scores是否被产生了
+        # Check whether scores have been generated
         for idx_val, i in itertools.product(range(self.contributions.shape[0]), range(self.contributions.shape[1])):
             if self.contributions[idx_val][i] != -float(np.inf):
                 break
@@ -192,7 +192,6 @@ class Measure(ABC):
         if len(self.gradient_similarity_cache) != 0:
             return self.gradient_similarity_cache[str(parts)]
 
-        # cache内还没有数据，要开始训练了，记得维护cache呀！
         self.gradient_similarity_cache[str(set())] = 0
 
         for S_size in range(1, self.num_parts + 1):
@@ -270,11 +269,9 @@ class Measure(ABC):
                 client_models[i].load_state_dict(self.model.state_dict())
 
         # training finished!
-        # report 一下最后的模型的 accuracy，看看是不是接近正常optimal的accuracy.
         y_pred = self.model.predict(self.X_test)
         print(f"accuracy of CG global model: {accuracy_score(self.y_test, y_pred)}")
 
-        # rs 其实就是最后的归一化后的（importance）贡献值了，所以他其实更像是一个contribution estimation scheme.
         return self.gradient_similarity_cache[str(parts)]
 
     # -------------------------- gradient similarity ends -------------------
@@ -296,7 +293,6 @@ class Measure(ABC):
         X_tilde = np.array(X_tilde).astype(np.float64)
         X_tilde = torch.tensor(X_tilde)
 
-        # 限制了distortion的范围，可能合理吧？
         X_tildes, dcube_collections = [X_tilde], [cubes]
         N = sum([len(X_tilde) for X_tilde in X_tildes])
 
@@ -331,10 +327,7 @@ class Measure(ABC):
 
         volumes = np.zeros(len(datasets))
         for i, dataset in enumerate(datasets):
-            # 给volumes[i] 赋值 det (dataset.T @ dataset)
-            # 遇到了数值问题
 
-            # 对于实对称半正定矩阵的det居然是负数！
             dataset.to(device)
             dataset = np.round(dataset, 3)
             mul_res = torch.matmul(dataset.T, dataset)
@@ -375,22 +368,17 @@ class Measure(ABC):
         # Omega = {}
         # a dictionary to store cubes of not full size
 
-        # 取每列的最小值
         min_ds = torch.min(X, dim=0).values
 
-        # 对于每一行数据而言
         for x in X:
             cube = np.zeros_like(x)
-            # 对于这一行数据中的每一个元素而言
             for d, xd in enumerate(x - min_ds):
-                d_index = floor(xd / omega)  # 第d维，该维度的第d_index个方块
+                d_index = floor(xd / omega) 
                 cube[d] = d_index
 
-            cube_key = tuple(cube)  # 这一行位于哪一个方块里
-            # 某一个小方块里的数据行数
+            cube_key = tuple(cube)  
             cubes[str(cube_key)] += 1
 
-            # 某一个小方块里具体的数据
             Omega[str(cube_key)].append(x)
 
             '''
@@ -403,13 +391,11 @@ class Measure(ABC):
             else:
                 Omega[cube_key] = x
             '''
-        # 注意，需要是float时才可以做此操作
 
         X_tilde = torch.stack([torch.stack(list(value)).float().mean(dim=0) for key, value in Omega.items()])
 
         # X_tilde = stack(list(Omega.values()))
         # Vol(X_tilde) × Pi i∈Ψ ρi
-        # 返回已经构造过的X_tilde和每个方块中的原始数据个数
         return X_tilde, cubes
 
  
@@ -418,17 +404,17 @@ class DataQuantity(Measure):
     def __init__(self, loader, model, cache, value_functions):
         super().__init__(loader, model, cache, value_functions)
         self.name = "DataQuantity"
-        self.contributions = None  # 供 get_remove_client_data() 使用
+        self.contributions = None 
 
     def compute_contributions(self):
         contributions = [self.compute_data_quantity({i}) for i in range(self.num_parts)]
-        self.contributions = contributions  # 存贡献值
-        return contributions  # 直接返回 list
+        self.contributions = contributions 
+        return contributions  # return list
 
     def get_contributions(self, **kwargs):
         if self.contributions is None:
             self.compute_contributions() 
-        return self.contributions, None  # 兼容 score_clients() 格式
+        return self.contributions, None  # Compatible with score_clients() format
 
     def get_remove_client_data(self):
         if self.contributions is None:
@@ -479,7 +465,7 @@ class GradientSimilarity(Measure):
     def __init__(self, loader, model, cache, value_functions):
         super().__init__(loader, model, cache, value_functions)
         self.name = "GradientSimilarity"
-        self.gradient_similarity_cache = {}  # 解决 AttributeError
+        self.gradient_similarity_cache = {}  
         self.contributions = None 
 
     def compute_contributions(self, gs_alpha=0.95, num_local_epochs=1):
@@ -527,7 +513,7 @@ class Credit(object):
 # NEW! gradient attack
 class GradientReplayAttack:
     def __init__(self, k, start_attack_round):
-        self.k = k  # 回看 k 轮
+        self.k = k 
         self.start_attack_round = start_attack_round  # start-attacking
         self.global_gradient_history = []
 
